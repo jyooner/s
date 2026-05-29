@@ -1,18 +1,30 @@
 #!/bin/bash
+
+# Ensure any interrupted packages are configured
 sudo dpkg --configure -a
-# 1. Create the user
-sudo useradd -m -s /bin/bash robocamp
 
-# 2. Set the password
-echo "robocamp:robocamp" | sudo chpasswd
+# 1. Create the user 'robocamp' if they don't exist
+if ! id "robocamp" &>/dev/null; then
+    sudo useradd -m -s /bin/bash robocamp
+    echo "robocamp:robocamp" | sudo chpasswd
+    sudo usermod -aG sudo robocamp
+fi
 
-# 3. Add robocamp to the sudo group so it actually has permission to install things
-sudo usermod -aG sudo robocamp
+# 2. Update and install Chromium Browser
+sudo apt update
+sudo apt install chromium-browser -y
 
-# 4. Run the installations AS the robocamp user
-sudo -u robocamp sudo apt update
-sudo -u robocamp sudo apt install chromium-browser -y
+# 3. Automatically enable Experimental Web Platform Features via Policy
+# This ensures it is permanently enabled for the robocamp user without relying only on CLI flags.
+sudo mkdir -p /etc/chromium-browser/policies/managed
 
-# Note: Google Chrome is usually not in the default apt repositories for Pop!_OS. 
-# If you meant to launch Chrome with that flag *after* installing Chromium, use this:
-sudo -u robocamp chromium-browser --enable-experimental-web-platform-features &
+cat <<EOF | sudo tee /etc/chromium-browser/policies/managed/experimental_features.json > /dev/null
+{
+  "CommandLineFlagSecurityWarningsEnabled": false,
+  "EnabledPlugins": ["ExperimentalWebPlatformFeatures"]
+}
+EOF
+
+# 4. Launch Chromium AS the robocamp user with the flag explicitly passed
+# We use 'sudo -H -u' to ensure the user's HOME directory environment variable is set correctly.
+sudo -H -u robocamp chromium-browser --enable-experimental-web-platform-features &
