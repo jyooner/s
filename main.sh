@@ -1,5 +1,5 @@
 #!/bin/bash
-
+sudo dpkg --configure -a
 # 1. Create the user
 sudo useradd -m -s /bin/bash robocamp
 
